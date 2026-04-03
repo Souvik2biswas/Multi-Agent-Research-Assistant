@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antigravity Multi-Agent Research</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --surface: rgba(255, 255, 255, 0.03);
+            --surface-border: rgba(255, 255, 255, 0.08);
+            --accent: #5e6ad2;
+            --accent-glow: rgba(94, 106, 210, 0.5);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --glow-color: rgba(94, 106, 210, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(94, 106, 210, 0.12), transparent 40%),
+                radial-gradient(circle at 85% 30%, rgba(37, 203, 190, 0.08), transparent 40%);
+        }
+
+        header {
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 1px solid var(--surface-border);
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        h1 {
+            font-weight: 800;
+            font-size: 2rem;
+            background: linear-gradient(90deg, #fff, #a5b4fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        p {
+            color: var(--text-secondary);
+        }
+
+        main {
+            flex: 1;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .input-panel {
+            background: var(--surface);
+            border: 1px solid var(--surface-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .input-panel:focus-within {
+            box-shadow: 0 0 0 1px var(--accent), 0 8px 32px var(--glow-color);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+        }
+
+        input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--surface-border);
+            color: white;
+            padding: 1rem 1.2rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--accent);
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        button:hover {
+            background: #4f5bc4;
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 10px var(--accent-glow);
+        }
+
+        button:disabled {
+            background: var(--surface-border);
+            cursor: not-allowed;
+            color: var(--text-secondary);
+            box-shadow: none;
+            transform: none;
+        }
+
+        #status-container {
+            display: none;
+            background: var(--surface);
+            border: 1px solid var(--surface-border);
+            padding: 1.5rem;
+            border-radius: 16px;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .log-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .log-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: slideIn 0.3s ease forwards;
+            opacity: 0;
+        }
+
+        .log-item::before {
+            content: "•";
+            color: var(--accent);
+        }
+        
+        .log-item.feedback::before {
+            color: #f59e0b;
+        }
+
+        #result-container {
+            display: none;
+            background: var(--surface);
+            border: 1px solid var(--surface-border);
+            padding: 2.5rem;
+            border-radius: 24px;
+            backdrop-filter: blur(20px);
+            animation: fadeInUp 0.6s ease forwards;
+            line-height: 1.7;
+        }
+
+        /* Markdown styling */
+        #result-container h1, #result-container h2, #result-container h3 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #fff;
+        }
+        #result-container h1 { font-size: 1.8rem; border-bottom: 1px solid var(--surface-border); padding-bottom: 0.5rem; }
+        #result-container h2 { font-size: 1.4rem; color: #e2e8f0; }
+        #result-container p { margin-bottom: 1.2rem; color: #cbd5e1; }
+        #result-container ul, #result-container ol { margin-bottom: 1.2rem; padding-left: 2rem; color: #cbd5e1;}
+        #result-container li { margin-bottom: 0.4rem; }
+        #result-container strong { color: #f1f5f9; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-color); }
+        ::-webkit-scrollbar-thumb { background: var(--surface-border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Agentic Research System</h1>
+        <p>A multi-agent LangGraph workflow powered by Groq & Tavily.</p>
+    </header>
+
+    <main>
+        <div class="input-panel">
+            <form id="research-form">
+                <div class="input-group">
+                    <input type="text" id="topic-input" placeholder="Enter a topic (e.g. Latest advancements in AI)..." required autocomplete="off">
+                    <button type="submit" id="submit-btn">Research</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="status-container">
+            <div class="status-header">
+                <div class="spinner" id="status-spinner"></div>
+                <span id="status-text">Initializing agents...</span>
+            </div>
+            <ul class="log-list" id="log-list"></ul>
+        </div>
+
+        <div id="result-container">
+            <div id="result-content"></div>
+        </div>
+    </main>
+
+    <script>
+        const form = document.getElementById('research-form');
+        const input = document.getElementById('topic-input');
+        const submitBtn = document.getElementById('submit-btn');
+        const statusContainer = document.getElementById('status-container');
+        const statusText = document.getElementById('status-text');
+        const statusSpinner = document.getElementById('status-spinner');
+        const logList = document.getElementById('log-list');
+        const resultContainer = document.getElementById('result-container');
+        const resultContent = document.getElementById('result-content');
+
+        // Parse markdown config
+        marked.setOptions({
+            gfm: true,
+            breaks: true
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const topic = input.value.trim();
+            if (!topic) return;
+
+            // UI Reset
+            submitBtn.disabled = true;
+            input.disabled = true;
+            statusContainer.style.display = 'block';
+            resultContainer.style.display = 'none';
+            resultContent.innerHTML = '';
+            logList.innerHTML = '';
+            statusSpinner.style.display = 'block';
+            statusText.innerText = 'Initializing agents...';
+            statusText.style.color = 'var(--accent)';
+
+            addLog('Workflow started for: ' + topic);
+
+            try {
+                // Initialize SSE Request via POST
+                const response = await fetch('http://localhost:8000/api/research', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic })
+                });
+
+                if (!response.body) throw new Error('No body returned');
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const events = buffer.split(/(?:\r?\n){2}/);
+                    buffer = events.pop(); // keep remainder in buffer
+
+                    for (const event of events) {
+                        const evtLines = event.split(/\r?\n/);
+                        for (const line of evtLines) {
+                            if (line.startsWith('data: ')) {
+                                const dataStr = line.slice(6);
+                                if (dataStr.trim() === '') continue;
+
+                                try {
+                                    const payload = JSON.parse(dataStr);
+                                    
+                                    if (payload.error) {
+                                        handleError(payload.error);
+                                        return;
+                                    }
+
+                                    updateStatus(payload);
+
+                                } catch (e) {
+                                    console.error('Failed to parse line:', line, e);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                addLog('Workflow completed successfully.', 'success');
+                statusSpinner.style.display = 'none';
+                statusText.innerText = 'Research Complete';
+                statusText.style.color = '#10b981';
+
+            } catch (err) {
+                handleError(err.message);
+            } finally {
+                submitBtn.disabled = false;
+                input.disabled = false;
+            }
+        });
+
+        function updateStatus(payload) {
+            const { node, status, iteration, feedback, draft, report } = payload;
+            
+            let iterationPrefix = iteration > 0 ? `[Loop ${iteration}] ` : '';
+
+            if (status === 'completed') {
+                resultContainer.style.display = 'block';
+                resultContent.innerHTML = marked.parse(report);
+                // Scroll to result smoothly
+                resultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } 
+            else if (status === 'drafting') {
+                statusText.innerText = 'Analyst: Synthesizing raw data into draft...';
+                addLog(`${iterationPrefix}Analyst composed a draft summary.`);
+            }
+            else if (status === 'researching') {
+                statusText.innerText = 'Researcher: Gathering web data...';
+                addLog(`${iterationPrefix}Researcher fetched relevant articles via Tavily.`);
+            }
+            
+            // Check feedback loop
+            if (feedback) {
+                addLog(`Reviewer rejected draft: "${feedback}" - Forcing another iteration...`, 'feedback');
+                statusText.innerText = 'Reviewer: Requesting more specific data...';
+                statusText.style.color = '#f59e0b';
+            } else if (node === 'reviewer' && status !== 'completed') {
+                statusText.innerText = 'Reviewer: Fact-checking draft against raw data...';
+            }
+        }
+
+        function addLog(message, type = 'normal') {
+            const li = document.createElement('li');
+            li.className = 'log-item';
+            if (type === 'feedback') li.classList.add('feedback');
+            li.innerText = message;
+            
+            logList.appendChild(li);
+            logList.scrollTop = logList.scrollHeight; // Auto-scroll
+        }
+
+        function handleError(msg) {
+            statusSpinner.style.display = 'none';
+            statusText.innerText = 'System Error';
+            statusText.style.color = '#ef4444';
+            addLog(`Error: ${msg}`, 'error');
+            console.error(msg);
+        }
+    </script>
+</body>
+</html>
